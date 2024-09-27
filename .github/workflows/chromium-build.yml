@@ -1,0 +1,42 @@
+name: Build Chromium
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Depot Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3 git wget
+          git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+          echo 'export PATH="$PATH:$HOME/depot_tools"' >> $GITHUB_ENV
+          source $GITHUB_ENV
+          gclient
+
+      - name: Fetch Chromium Source
+        run: |
+          mkdir chromium && cd chromium
+          fetch --nohooks chromium
+          gclient sync
+
+      - name: Generate Build Files
+        run: |
+          cd chromium/src
+          gn gen out/Default
+
+      - name: Build Chromium
+        run: |
+          cd chromium/src
+          autoninja -C out/Default chrome
